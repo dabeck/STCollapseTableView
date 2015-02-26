@@ -78,6 +78,7 @@
     self.shouldHandleHeadersTap = YES;
 	self.sectionsStates = [[NSMutableArray alloc] init];
     self.collapseRowsAnimation = UITableViewRowAnimationTop;
+
 }
 
 - (void)setDataSource:(id <UITableViewDataSource>)newDataSource
@@ -137,10 +138,7 @@
 	if (self.exclusiveSections)
     {
         NSUInteger openedSection = [self openedSection];
-        
-		[self setSectionAtIndex:sectionIndex open:YES];
-		[self setSectionAtIndex:openedSection open:NO];
-        
+		
         if(animated)
 		{
             NSArray* indexPathsToInsert = [self indexPathsForRowsInSectionAtIndex:sectionIndex];
@@ -159,15 +157,30 @@
                 insertAnimation = UITableViewRowAnimationBottom;
                 deleteAnimation = UITableViewRowAnimationTop;
             }
-            
-            [self beginUpdates];
-            [self insertRowsAtIndexPaths:indexPathsToInsert withRowAnimation:insertAnimation];
-            [self deleteRowsAtIndexPaths:indexPathsToDelete withRowAnimation:deleteAnimation];
-            [self endUpdates];
+
+			[CATransaction begin];
+			[self setSectionAtIndex:openedSection open:NO];
+
+			[self beginUpdates];
+			
+			[CATransaction setCompletionBlock: ^{
+				[self setSectionAtIndex:sectionIndex open:YES];
+				[self beginUpdates];
+				[self insertRowsAtIndexPaths:indexPathsToInsert withRowAnimation:UITableViewRowAnimationTop];
+				[self endUpdates];
+			
+			}];
+			
+			[self deleteRowsAtIndexPaths:indexPathsToDelete withRowAnimation:UITableViewRowAnimationTop];
+			
+			[self endUpdates];
+			
+			[CATransaction commit];
+
         }
         else
         {
-            [self reloadData];
+			[self reloadData];
         }
 	}
     else
@@ -280,7 +293,7 @@
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
-	int nbSection = [self.collapseDataSource numberOfSectionsInTableView:tableView];
+	NSInteger nbSection = [self.collapseDataSource numberOfSectionsInTableView:tableView];
     
 	while (nbSection < [self.sectionsStates count])
     {
@@ -314,7 +327,7 @@
             }
         }
         
-        if (!tapGestureFound)
+        if (!tapGestureFound )
         {
             [view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)]];
         }
